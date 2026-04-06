@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mario Birthday 💙</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Poppins',sans-serif;height:100vh;overflow:hidden;background:linear-gradient(#5ecbff,#87e0ff);color:white}
+
+/* CLOUD */
+.cloud{position:absolute;width:140px;height:70px;background:white;border-radius:60px;animation:cloud 35s linear infinite}
+.cloud::before,.cloud::after{content:"";position:absolute;background:white;border-radius:50%}
+.cloud::before{width:60px;height:60px;left:-30px}
+.cloud::after{width:80px;height:80px;right:-40px;top:-20px}
+@keyframes cloud{from{left:-200px}to{left:120%}}
+
+/* GROUND */
+.ground{position:absolute;bottom:0;width:100%;height:90px;background:#b97a56;border-top:5px solid #8d5a3b}
+
+/* CARD */
+.card{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(1);width:380px;padding:25px;border-radius:25px;background:rgba(0,0,0,0.4);backdrop-filter:blur(15px);text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.5);transition:0.4s}
+.card.win{transform:translate(-50%,-50%) scale(1.1);box-shadow:0 0 50px rgba(255,80,120,0.7)}
+
+button{margin-top:20px;width:100%;padding:12px;border:none;border-radius:15px;background:linear-gradient(45deg,#ff3c3c,#ff8c42);color:white;font-weight:600;cursor:pointer;transition:0.3s}
+button:hover{transform:scale(1.08)}
+
+.progress{height:6px;background:rgba(255,255,255,0.3);border-radius:10px;margin-top:15px}
+.bar{height:100%;width:0%;background:linear-gradient(90deg,#ff3c3c,#ff8c42)}
+
+/* IMAGE (fade) */
+img{width:100%;margin-top:15px;border-radius:15px;display:none;opacity:0;transition:opacity .6s ease}
+img.show{display:block;opacity:1}
+
+/* COIN */
+.coin{position:absolute;width:22px;height:22px;background:gold;border-radius:50%;animation:coin 0.8s forwards}
+@keyframes coin{0%{transform:translateY(0)}100%{transform:translateY(-100px);opacity:0}}
+
+/* FIREWORK */
+.firework{position:absolute;width:5px;height:5px;border-radius:50%;animation:explode 1s ease-out forwards}
+@keyframes explode{0%{transform:scale(1);opacity:1}100%{transform:scale(12);opacity:0}}
+
+/* HEART */
+.heart{position:absolute;color:#ff4d6d;font-size:18px;animation:floatUp 2.5s linear forwards}
+@keyframes floatUp{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-180px);opacity:0}}
+
+/* CHARACTER */
+#character{position:absolute;bottom:90px;left:30px;font-size:42px;transition:0.3s}
+.hidden{display:none}
+
+/* CINEMATIC ENDING */
+@keyframes zoomSlow {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.15); }
+}
+@keyframes fadeInSoft {
+  0% { opacity: 0; transform: translate(-50%,-45%) scale(0.95); }
+  100% { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+}
+.vignette::after{
+  content:"";position:fixed;inset:0;pointer-events:none;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 40%, rgba(0,0,0,0.55) 100%);
+  z-index: 998;
+}
+</style>
+</head>
+
+<body>
+
+<div id="character">🧸</div>
+<div class="cloud" style="top:10%"></div>
+<div class="cloud" style="top:25%"></div>
+<div class="ground"></div>
+
+<!-- BACKGROUND MUSIC (letakkan file di /assets/music.mp3) -->
+<audio id="bgm" loop preload="auto">
+  <source src="assets/music.mp3" type="audio/mpeg">
+</audio>
+
+<div class="card" id="welcome">
+<h1>Hallo Ariesta 🎮💙</h1>
+<p>Ready masuk dunia kita?</p>
+<button onclick="startApp()">Start Game ▶️</button>
+</div>
+
+<div class="card hidden" id="main">
+<h1 id="title">Game Start 🎮</h1>
+<p id="text">Level 1...</p>
+<div class="progress"><div class="bar" id="bar"></div></div>
+<button onclick="nextStep(event)">Jump 🎮</button>
+<img id="photo">
+</div>
+
+<script>
+const nama="Ariesta 💙";
+
+// FOTO
+const fotoList=[
+  "assets/img/foto1.jpg",
+  "assets/img/foto2.jpg",
+  "assets/img/foto3.jpg"
+];
+
+const messages=[
+"Heii kamu 👀",
+"Kita mulai dari awal ya...",
+"Kayak Mario level 1 😆",
+"Pelan-pelan aku jatuh cinta...",
+"Sampai sekarang aku masih disini 💙",
+"Hari ini hari spesial kamu 🎂",
+"Aku cuma mau bilang...",
+"Aku sayang kamu banget 💙"
+];
+
+const longLetter=`Selamat ulang tahun ya 💙
+
+Semoga semua hal baik selalu datang ke kamu.
+
+Aku mungkin ga sempurna, tapi aku selalu serius sama kamu.
+
+Terima kasih udah bertahan sejauh ini.
+
+Aku sayang kamu 💙`;
+
+let step=0;
+let slideIndex=0;
+let slideTimer=null;
+
+function startApp(){
+  document.getElementById('welcome').classList.add('hidden');
+  document.getElementById('main').classList.remove('hidden');
+
+  const bgm=document.getElementById('bgm');
+  if(bgm){
+    bgm.volume=0.6;
+    bgm.play().catch(()=>{});
+  }
+}
+
+function nextStep(e){
+  jumpCharacter();
+  spawnCoin(e);
+
+  const t=document.getElementById('title');
+  const txt=document.getElementById('text');
+  const bar=document.getElementById('bar');
+  const img=document.getElementById('photo');
+  const card=document.getElementById('main');
+
+  if(step===0) t.innerHTML="🎂 Happy Birthday "+nama;
+  if(step<messages.length) txt.innerHTML=messages[step];
+
+  if(step===2) startSlideshow(img);
+
+  if(step===messages.length-1){
+    t.innerHTML="💙 YOU WIN MY HEART 💙";
+    card.classList.add('win');
+    launchFireworks();
+    spawnHearts();
+    stopSlideshow();
+    typeLetter();
+  }
+
+  bar.style.width=((step+1)/messages.length)*100+"%";
+  step++;
+}
+
+function startSlideshow(img){
+  if(!img) return;
+  if(slideTimer) return;
+
+  img.style.display='block';
+  img.classList.add('show');
+  img.src=fotoList[0];
+
+  slideTimer=setInterval(()=>{
+    slideIndex=(slideIndex+1)%fotoList.length;
+    img.classList.remove('show');
+    setTimeout(()=>{
+      img.src=fotoList[slideIndex];
+      img.classList.add('show');
+    },150);
+  },2000);
+}
+
+function stopSlideshow(){
+  if(slideTimer){
+    clearInterval(slideTimer);
+    slideTimer=null;
+  }
+}
+
+function spawnCoin(e){
+  const c=document.createElement('div');
+  c.className='coin';
+  c.style.left=e.clientX+'px';
+  c.style.top=e.clientY+'px';
+  document.body.appendChild(c);
+  setTimeout(()=>c.remove(),800);
+}
+
+function launchFireworks(){
+  for(let i=0;i<15;i++){
+    const f=document.createElement('div');
+    f.className='firework';
+    f.style.left=Math.random()*100+'%';
+    f.style.top=Math.random()*50+'%';
+    f.style.background='hsl('+Math.random()*360+',100%,50%)';
+    document.body.appendChild(f);
+  }
+}
+
+function spawnHearts(){
+  for(let i=0;i<20;i++){
+    setTimeout(()=>{
+      const h=document.createElement('div');
+      h.className='heart';
+      h.innerHTML='💙';
+      h.style.left=Math.random()*100+'%';
+      h.style.bottom='0px';
+      document.body.appendChild(h);
+      setTimeout(()=>h.remove(),2500);
+    },i*150);
+  }
+}
+
+function jumpCharacter(){
+  const char=document.getElementById('character');
+  if(!char) return;
+  char.style.transform='translateY(-70px)';
+  setTimeout(()=>{char.style.transform='translateY(0)'},250);
+}
+
+function typeLetter(){
+  const txt=document.getElementById('text');
+  let i=0;
+  txt.innerHTML="";
+
+  const interval=setInterval(()=>{
+    txt.innerHTML+=longLetter[i];
+    i++;
+    if(i>=longLetter.length){
+      clearInterval(interval);
+      showFinalScene();
+    }
+  },35);
+}
+
+function showFinalScene(){
+  const img=document.getElementById('photo');
+  const bgm=document.getElementById('bgm');
+  if(!img) return;
+
+  // freeze slideshow image
+  stopSlideshow();
+
+  // fullscreen + cinematic filter
+  img.style.position='fixed';
+  img.style.top='0';
+  img.style.left='0';
+  img.style.width='100%';
+  img.style.height='100%';
+  img.style.objectFit='cover';
+  img.style.zIndex='999';
+  img.style.filter='blur(2px) brightness(0.7) saturate(0.9)';
+  img.style.animation='zoomSlow 10s ease-out forwards';
+
+  // vignette overlay class on body
+  document.body.classList.add('vignette');
+
+  // fade out music smoothly
+  if(bgm){
+    let v = bgm.volume;
+    const fade = setInterval(()=>{
+      v -= 0.02;
+      if(v <= 0){ bgm.volume = 0; clearInterval(fade); }
+      else { bgm.volume = v; }
+    }, 120);
+  }
+
+  // big centered text
+  const overlay=document.createElement('div');
+  overlay.innerHTML = '💙 I LOVE YOU 💙';
+  overlay.style.position='fixed';
+  overlay.style.top='50%';
+  overlay.style.left='50%';
+  overlay.style.transform='translate(-50%,-50%)';
+  overlay.style.fontSize='44px';
+  overlay.style.fontWeight='700';
+  overlay.style.letterSpacing='2px';
+  overlay.style.textAlign='center';
+  overlay.style.zIndex='1000';
+  overlay.style.textShadow='0 10px 30px rgba(0,0,0,0.6)';
+  overlay.style.animation='fadeInSoft 1.8s ease forwards';
+
+  // sub text
+  const sub=document.createElement('div');
+  sub.innerHTML = 'for Ariesta 💙';
+  sub.style.marginTop='10px';
+  sub.style.fontSize='18px';
+  sub.style.opacity='0.9';
+
+  overlay.appendChild(sub);
+  document.body.appendChild(overlay);
+}
+
+</script>
+
+</body>
+</html>
